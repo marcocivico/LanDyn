@@ -1,12 +1,11 @@
 turtles-own [
   minority? ;; does the person belong to the minority group?
-  fluency
-  nearest-neighbor
+  fluency ;; what is the level of fluency of the minority speaker in the minority language?
+  nearest-neighbor ;; who's your physically closest agent?
   age
   sex
-  partner
-  reveal?
-  educated?
+  reveal? ;; do you always try to speak the minority language or not?
+  educated? ;; are you currently involved in an education plan in the minority language?
 ]
 
 to setup
@@ -17,7 +16,7 @@ to setup
   reset-ticks
 end
 
-to make-turtles
+to make-turtles ;; the initial population is created and randomly positioned on the area. Everybody is given the same attribute.
   create-turtles total-population [
     set minority? false
     set color blue
@@ -28,34 +27,34 @@ to make-turtles
   ]
 end
 
-to generate-minority
+to generate-minority ;; minority language speakers are given their specific attributes
   ask turtles [
-    if (random 100) < minority-group
+    if (random 100) < minority-group ;; a part of the population is given minority status, colored red and given a level of fluency in the minority language
     [ set minority? true
       set color red
       set fluency median (list 1 (random-normal average-initial-lv 10) 100) ]
     ask turtles with [ minority? = true ] [
-      ifelse (random 100) < reveal-strategy
+      ifelse (random 100) < reveal-strategy ;; minority language speakers are split in two types of personality, reveals vs hide
       [ set reveal? true ] [ set reveal? false ]
-      ifelse (random 100) < education
+      ifelse (random 100) < education ;; should education plan be implemented by the government, a part of the population is being involved in them
       [ set educated? true ] [ set educated? false ]
   ] ]
 end
 
 to go
   ask turtles [
-    get-old
-    check-death
-    wiggle    ]
+    get-old ;; agents age 1 year
+    check-death ;; check if they reached age 80 - if so, the agent leaves the simulation
+    wiggle    ] ;; if the agent is alive, it moves one step in a random direction
   ask turtles with [ color = red and age >= 6 ] [
-    converse
-    change-color
-    activate-policy
+    converse ;; minority agents who are at least 6, interact with their closest agent who is also at least 6
+    change-color ;; if a minority speakers reaches fluency 0, it turns blue, i.e. become a majority speaker only.
+    activate-policy ;; (see below)
   ]
-  reproduce
-  if grim-reaper? [ grim-reaper ]
+  reproduce ;; female agents might give birth to a new agent
+  if grim-reaper? [ grim-reaper ] ;; randomnly kills agent if the total population grows above a certain number - only to try simulations on my laptot (simulations with two many agents would be too slow)
   tick
-  if all? turtles [ color = blue ] [ stop ]
+  if all? turtles [ color = blue ] [ stop ] ;; stops the simulation if there's no more diversity
   if all? turtles [ color = red ] [ stop ]
 end
 
@@ -71,29 +70,29 @@ to grim-reaper
   ]
 end
 
-to wiggle
+to wiggle ;; move 1 step in a random direction
   rt random 90
   lt random 90
   forward 1
 end
 
-to converse
+to converse ;; interact with closest agent aged at least 6
   set nearest-neighbor min-one-of (other turtles with [ age >= 6 ]) [ distance myself ]
-  ifelse reveal? = true [
-    ifelse [ color ] of nearest-neighbor = blue
-    [ set fluency fluency - 1 ]
+  ifelse reveal? = true [ ;; if you are a reveal type agent...
+    ifelse [ color ] of nearest-neighbor = blue ;; ...and your closest agent is NOT a minority language speaker...
+    [ set fluency fluency - 1 ] ;; ...your fluency in the minority language goes down by 1.
+    [ ifelse (fluency < 99) ;; if you are a reaveal type agent and your closest neighbor is also a minority language speaker...
+      [ set fluency fluency + 1 ] ;; ...your fluency goes up by 1 if your fluency is currently less than 100...
+      [ set fluency 100 ] ] ] ;; ...and stays at 100 if you're already proficient.
+  [ ifelse [ reveal? ] of nearest-neighbor = true ;; regardless of your personality type, if your closest neighbor is a minority language speaker of reveal type personality...
     [ ifelse (fluency < 99)
-      [ set fluency fluency + 1 ]
-      [ set fluency 100 ] ] ]
-  [ ifelse [ reveal? ] of nearest-neighbor = true
-    [ ifelse (fluency < 99)
-      [ set fluency fluency + 1 ]
+      [ set fluency fluency + 1 ] ;; ...your fluency goes up by 1 if your fluency is currently less than 100...
       [ set fluency 100 ] ]
-    [ set fluency fluency - 1 ] ]
+    [ set fluency fluency - 1 ] ] ;;...and stays at 100 if you're already proficient.
 end
 
 to change-color
-  if fluency <= 0
+  if fluency <= 0 ;; if your fluency in the minority language reaches zero, you change to a majority agent.
     [ set color blue
  set minority? false set reveal? false set educated? false ]
 end
@@ -103,25 +102,25 @@ to get-old
 end
 
 to check-death
-    if age >= life-expectancy [ die ]
+    if age >= life-expectancy [ die ] ;; if the attribute age reaches the value set for life expectancy, leave the simulation.
 end
 
 to reproduce
-  ask turtles with [ color = red and sex = "female" and age >= 14 and age <= 50 ] [
-    if random 100 < (count turtles with [ color = red ] / count turtles with [ color = red and sex = "female" and age >= 14 and age <= 50 ]) * minority-growth-rate
-      [ hatch 1 [ set age 0
+  ask turtles with [ color = red and sex = "female" and age >= 14 and age <= 50 ] [ ;; if you're a minority female agent aged between 14 and 50...
+    if random 100 < (count turtles with [ color = red ] / count turtles with [ color = red and sex = "female" and age >= 14 and age <= 50 ]) * minority-growth-rate ;; ...with a probability X... [ N.B.: if we have a population of N and a portion m < N is fertile women, in order to have a growth equal to g (where g is the growth rate * 100), the percentage (* 100) X of women giving birth is equal to (N/m)*g ]
+      [ hatch 1 [ set age 0 ;; ...give birth to a new majority agent with age 0.
         set sex one-of [ "male" "female" ]
         ifelse (random 100) < reveal-strategy
           [ set reveal? true ] [ set reveal? false ]
         ifelse (random 100) < education
           [ set educated? true ] [ set educated? false ]
-        ifelse (random 100) < exogamy-rate
+        ifelse (random 100) < exogamy-rate ;; With a probability Z, the baby will be a majority speaker only (e.g. if exogamy is 10, 10 babies out of 100 born to a minority mother will be assumed to have a majority father).
           [ set color blue set minority? false set reveal? false ] [ set color red ]
     ]
   ] ]
-  ask turtles with [ color = blue and sex = "female" and age >= 14 and age <= 50 ] [
-    if random 100 < (count turtles with [ color = blue ] / count turtles with [ color = blue and sex = "female" and age >= 14 and age <= 50 ]) * majority-growth-rate
-    [ hatch 1 [ set age 0
+  ask turtles with [ color = blue and sex = "female" and age >= 14 and age <= 50 ] [ ;; if you're a majority female agent aged between 14 and 50...
+    if random 100 < (count turtles with [ color = blue ] / count turtles with [ color = blue and sex = "female" and age >= 14 and age <= 50 ]) * majority-growth-rate ;; ...with a probability Y...
+    [ hatch 1 [ set age 0 ;; ...give birth to a new majority agent with age 0.
      set sex one-of [ "male" "female" ]
      set minority? false
      set educated? false
@@ -131,10 +130,10 @@ to reproduce
 end
 
 to activate-policy
-    if policy and (count turtles with [ color = red ] / count turtles < minority-threshold / 100) [
-    if (age <= 18) and educated? = true [
+    if policy and (count turtles with [ color = red ] / count turtles < minority-threshold / 100) [ ;; if education policies are active and the proportion of the minority drops below a given threshold...
+    if (age <= 18) and educated? = true [ ;; and you're aged between 6 and 18...
       ifelse fluency < 90
-      [ set fluency fluency + ed-intensity ] [ set fluency 100 ]
+      [ set fluency fluency + ed-intensity ] [ set fluency 100 ] ;;...increase your fluency by an amount equal to the variable "ed-intensity" if its below 90, or set it to 100 if it's already at least 90.
     ] ]
 end
 
@@ -196,7 +195,7 @@ total-population
 total-population
 0
 1000
-200.0
+100.0
 1
 1
 NIL
@@ -542,36 +541,6 @@ average-initial-lv
 1
 1
 NIL
-HORIZONTAL
-
-SLIDER
-225
-258
-397
-291
-maj-X-rate
-maj-X-rate
-0
-100
-5.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-226
-296
-398
-329
-min-X-rate
-min-X-rate
-0
-100
-5.0
-1
-1
-%
 HORIZONTAL
 
 SLIDER
